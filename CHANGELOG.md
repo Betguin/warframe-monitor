@@ -1,5 +1,10 @@
 # Histórico
 
+## 3.3.4 — Ainda em Alpha Test
+
+- Versão exibida no cabeçalho do painel expandido.
+- Acesso ao modo de testes diretamente nas configurações pela engrenagem.
+
 ## 3.3.3 — Ainda em Alpha Test
 
 - Modo de testes opcional, ativado pelo menu do Tampermonkey e salvo localmente.

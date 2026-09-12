@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Warframe Monitor
 // @namespace    beto.wfmarket.pricealert
-// @version      3.3.3
+// @version      3.3.4
 // @description  Monitora itens, Rivens, Kuva Liches e Sisters, com filtros e alertas no Discord.
 // @author       Beto
 // @match        https://warframe.market/*
@@ -28,6 +28,7 @@
 
 (() => {
   'use strict';
+  const VERSION = '3.3.4';
   const BRAND_ICON = GM_getResourceURL('wmIcon');
 
   // Itens e catálogos: API v2. Busca de contratos: API v1, ainda usada pelo site.
@@ -324,16 +325,25 @@
     settings.append(section);
     category.addEventListener('change', refresh);
     refresh();
-    GM_registerMenuCommand('Warframe Monitor: ativar/desativar modo de testes', () => {
+    const toggleTests = () => {
       const enabled = !GM_getValue('wfpa_dev_mode', false);
       GM_setValue('wfpa_dev_mode', enabled);
       section.hidden = !enabled;
+      toggle.textContent = enabled ? 'Ocultar modo de testes' : 'Mostrar modo de testes';
+      toggle.setAttribute('aria-expanded', String(enabled));
       if (enabled) {
         $('panel').hidden = false; $('fab').setAttribute('aria-expanded', 'true');
         settings.hidden = false; settings.open = true; section.open = true;
       }
       setStatus(enabled ? 'Modo de testes ativado neste Tampermonkey.' : 'Modo de testes desativado.');
-    });
+    };
+    const toggle = button(section.hidden ? 'Mostrar modo de testes' : 'Ocultar modo de testes', toggleTests);
+    toggle.id = 'test-toggle';
+    toggle.setAttribute('aria-controls', 'test-menu');
+    toggle.setAttribute('aria-expanded', String(!section.hidden));
+    section.open = !section.hidden;
+    settings.insertBefore(toggle, section);
+    GM_registerMenuCommand('Warframe Monitor: ativar/desativar modo de testes', toggleTests);
   }
 
   async function notifyOffers(m, offers) {
@@ -561,7 +571,7 @@
     for (const n of [...panel.children]) if (n.tagName === 'H3' || (n.tagName === 'P' && n !== statusNode)) n.remove();
     panel.append(context, follow, $('kind').parentElement, $('weapon').parentElement, $('threshold').parentElement, $('save'), statusNode, filters, saved, settings);
     const header = el('header', null, { id: 'brand-header' });
-    const copy = el('div', null, { id: 'brand-copy' }); copy.append(panel.querySelector('h2'), el('small', 'ALPHA · ALERTAS DE MERCADO'));
+    const copy = el('div', null, { id: 'brand-copy' }); copy.append(panel.querySelector('h2'), el('small', `v${VERSION} · Ainda em Alpha Test`, { id: 'version-label' }));
     const actions = el('div', null, { id: 'brand-actions' }); actions.append(gear, $('close'));
     header.append(el('img', null, { src: BRAND_ICON, alt: '', draggable: 'false' }), copy, actions);
     panel.prepend(header);
