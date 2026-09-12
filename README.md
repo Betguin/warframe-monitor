@@ -2,9 +2,11 @@
 
 # Warframe Monitor
 
-**Alpha** · Notificador de preços do Warframe Market para Tampermonkey, com alertas no Discord.
+**Ainda em Alpha Test**
 
-Abra a página de um item ou faça uma busca em Contratos, defina seu preço máximo e ative o monitor. O alerta usa o preço real da oferta: com limite de 50 plat e uma oferta de 20 plat, a mensagem de compra indica 20 plat.
+Notificador de preços do Warframe Market para Tampermonkey, com alertas no Discord.
+
+Abra a página de um item ou faça uma busca em Contratos, defina seu preço máximo e ative o monitor.
 
 ## Instalar
 
@@ -24,8 +26,6 @@ Se você já usa a versão anterior, substitua o código dentro do **mesmo scrip
 - Filtros de rank, atributos, rolagens, bônus elemental, efêmera e peculiaridade.
 - Plataforma e crossplay lidos do próprio site ao salvar o monitor.
 - Lista de monitores visível, configurações recolhidas e histórico para evitar repetições.
-
-O PNG está separado em `icon.png`. O Tampermonkey o carrega com `@resource` e `GM_getResourceURL`, sem um bloco gigante de Base64 dentro do código.
 
 ## Limitações da Alpha
 
