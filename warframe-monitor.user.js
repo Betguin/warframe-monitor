@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Warframe Monitor
 // @namespace    beto.wfmarket.pricealert
-// @version      3.3.4
+// @version      3.3.4.1
 // @description  Monitora itens, Rivens, Kuva Liches e Sisters, com filtros e alertas no Discord.
 // @author       Beto
 // @match        https://warframe.market/*
@@ -28,7 +28,7 @@
 
 (() => {
   'use strict';
-  const VERSION = '3.3.4';
+  const VERSION = '3.3.4.1';
   const BRAND_ICON = GM_getResourceURL('wmIcon');
 
   // Itens e catálogos: API v2. Busca de contratos: API v1, ainda usada pelo site.
@@ -248,7 +248,9 @@
   function alertEmbed(o, m) {
     const name = describeOffer(o, m);
     const itemText = m.kind === 'riven' ? `${m.name} ${o.item.name || ''}` : name;
-    const whisper = m.kind === 'riven'
+    const whisper = m.kind === 'item'
+      ? `/w ${clean(o.seller)} Hi! I want to buy: "${clean(m.name)}"${o.rank == null ? '' : ` (Rank ${o.rank})`} for ${o.price} platinum. (warframe.market)`
+      : m.kind === 'riven'
       ? `/w ${clean(o.seller)} Hi! Is your ${clean(itemText).trim()} Riven still available for ${o.price} platinum?`
       : `/w ${clean(o.seller)} Hi! I'd like to buy your ${clean(itemText)} for ${o.price} platinum.`;
     const attrs = m.kind === 'riven' ? (o.item.attributes || []).map(a => escapeMd(`${a.positive ? '+' : '−'} ${Math.abs(a.value)} ${titleOf(a.url_name)}`)).join('\n').slice(0, 1000) : '';

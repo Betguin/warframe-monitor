@@ -1,5 +1,10 @@
 # Histórico
 
+## 3.3.4.1 — Hotfix
+
+- Restaura a mensagem padrão de compra para itens comuns, com nome entre aspas, rank quando disponível e assinatura do Warframe Market.
+- Mantém as mensagens de Riven, Kuva Lich e Sister.
+
 ## 3.3.4 — Ainda em Alpha Test
 
 - Versão exibida no cabeçalho do painel expandido.
