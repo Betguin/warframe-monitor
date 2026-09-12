@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Warframe Monitor
 // @namespace    beto.wfmarket.pricealert
-// @version      3.3.2
+// @version      3.3.3
 // @description  Monitora itens, Rivens, Kuva Liches e Sisters, com filtros e alertas no Discord.
 // @author       Beto
 // @match        https://warframe.market/*
@@ -13,6 +13,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @grant        GM_getResourceURL
+// @grant        GM_registerMenuCommand
 // @resource     wmIcon https://raw.githubusercontent.com/Betguin/warframe-monitor/main/icon.png
 // @icon         https://raw.githubusercontent.com/Betguin/warframe-monitor/main/icon.png
 // @homepageURL  https://github.com/Betguin/warframe-monitor
@@ -271,6 +272,70 @@
     return { allowed_mentions: { parse: [] }, embeds: [alertEmbed(o, m)], components: [{ type: 1, components: links }] };
   }
 
+  function testPayload(kind) {
+    if (!Object.hasOwn(KINDS, kind)) throw new Error('Categoria de teste inválida.');
+    const samples = {
+      item: { name: 'Serration', slug: 'serration', price: 10, threshold: 20 },
+      riven: { name: 'Torid', slug: 'torid', price: 20, threshold: 50 },
+      lich: { name: 'Kuva Nukor', slug: 'kuva_nukor', price: 80, threshold: 100 },
+      sister: { name: 'Tenet Cycron', slug: 'tenet_cycron', price: 90, threshold: 120 },
+    };
+    const sample = samples[kind];
+    const m = { ...sample, kind, platform: 'pc', crossplay: true, filters: {}, priceMode: 'direct' };
+    const o = { price: sample.price, seller: 'VENDEDOR_EXEMPLO', status: 'ingame', rank: 10, direct: true, url: searchUrl(m),
+      item: { name: 'Crita-visican', mod_rank: 8, mastery_level: 12, re_rolls: 5, damage: 55, element: 'toxin', having_ephemera: true,
+        attributes: [{ positive: true, value: 170, url_name: 'critical_chance' }, { positive: true, value: 120, url_name: 'damage' }, { positive: false, value: -30, url_name: 'zoom' }] } };
+    const payload = alertPayload(o, m), embed = payload.embeds[0];
+    embed.title = `[TESTE] ${embed.title}`;
+    embed.description = '**Exemplo fictício — não é uma oferta real.**\n\n' + embed.description;
+    embed.footer.text = 'Warframe Monitor · TESTE · Nenhum monitor foi alterado';
+    // Não direcionar o usuário a um vendedor ou anúncio fictício.
+    delete embed.url;
+    delete payload.components;
+    return payload;
+  }
+
+  function buildTestMenu(settings) {
+    const section = disclosure('Modo de testes', 'test-menu');
+    section.hidden = !GM_getValue('wfpa_dev_mode', false);
+    section.append(el('p', 'Exemplos fictícios. Envie uma prévia ao webhook preenchido nas configurações.', { class: 'muted' }));
+    section.append(field('Exemplo de alerta', 'test-kind', Object.entries(KINDS)));
+    const category = section.querySelector('#test-kind');
+    const preview = el('pre', '', { id: 'test-preview', style: 'white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.5 inherit;background:#0e191e;padding:10px;border-radius:6px' });
+    section.append(preview);
+    const refresh = () => {
+      const e = testPayload(category.value).embeds[0];
+      preview.textContent = `${e.title}\n\n${e.description}\n\n${e.fields.map(f => `${f.name}: ${f.value}`).join('\n')}\n\n${e.footer.text}`;
+    };
+    const send = button('Enviar exemplo ao Discord', async () => {
+      if (!GM_getValue('wfpa_dev_mode', false) || send.disabled) return;
+      const webhook = val('webhook').trim();
+      if (!validWebhook(webhook)) return setStatus('Preencha um webhook válido nas configurações.', true);
+      const payload = testPayload(category.value);
+      send.disabled = true;
+      try {
+        await sleep(Math.max(0, discordBackoff - Date.now()));
+        await http(`${webhook}?wait=true`, { method: 'POST', body: payload });
+        setStatus('Exemplo enviado ao Discord. Seus monitores não foram alterados.');
+      } catch (e) { setStatus(e.message, true); }
+      finally { await sleep(1200); send.disabled = false; }
+    });
+    section.append(send);
+    settings.append(section);
+    category.addEventListener('change', refresh);
+    refresh();
+    GM_registerMenuCommand('Warframe Monitor: ativar/desativar modo de testes', () => {
+      const enabled = !GM_getValue('wfpa_dev_mode', false);
+      GM_setValue('wfpa_dev_mode', enabled);
+      section.hidden = !enabled;
+      if (enabled) {
+        $('panel').hidden = false; $('fab').setAttribute('aria-expanded', 'true');
+        settings.hidden = false; settings.open = true; section.open = true;
+      }
+      setStatus(enabled ? 'Modo de testes ativado neste Tampermonkey.' : 'Modo de testes desativado.');
+    });
+  }
+
   async function notifyOffers(m, offers) {
     const previous = m.notified || {};
     const eligible = offers.filter(o => o.price <= m.threshold && allowedStatus(o.status, m.status));
@@ -479,6 +544,7 @@
     settings.append($('webhook').parentElement);
     for (const b of buttons.filter(n => ['Salvar webhook', 'Testar webhook'].includes(n.textContent))) settings.append(b);
     for (const id of ['seller-status', 'price-mode']) settings.append($(id).parentElement);
+    buildTestMenu(settings);
     settings.append($('executor'));
     settings.append(el('p', 'Mantenha uma aba do Market aberta. Consultas a cada 2 min, mais o tempo da fila. Use um único domínio do site.', { class: 'muted' }));
     settings.open = true;

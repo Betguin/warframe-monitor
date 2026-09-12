@@ -1,5 +1,11 @@
 # Histórico
 
+## 3.3.3 — Ainda em Alpha Test
+
+- Modo de testes opcional, ativado pelo menu do Tampermonkey e salvo localmente.
+- Prévias de item, Riven, Lich e Sister, identificadas como exemplos fictícios.
+- Envio manual de um exemplo ao Discord sem alterar monitores ou histórico.
+
 ## 3.3.2 — Ainda em Alpha Test
 
 - Alertas do Discord com ícone, destaque de preço e atributos de Riven em linhas separadas.
