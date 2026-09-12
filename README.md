@@ -34,3 +34,6 @@ Mantenha o navegador aberto e uma aba do Market carregada. A consulta é periód
 O webhook fica no armazenamento local do Tampermonkey. Não publique a URL do seu webhook em issues, capturas de tela ou arquivos do repositório.
 
 Consulte o [guia de uso](GUIA.md) para detalhes de filtros, migração e execução. Projeto independente, sem afiliação oficial com Warframe Market ou Digital Extremes.
+
+
+**Codigo Feito Por IA, Famoso VibeCoded, Qualquer Hate é Aceitavel**
