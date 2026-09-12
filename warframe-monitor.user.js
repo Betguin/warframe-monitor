@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Warframe Monitor
 // @namespace    beto.wfmarket.pricealert
-// @version      3.3.1
+// @version      3.3.2
 // @description  Monitora itens, Rivens, Kuva Liches e Sisters, com filtros e alertas no Discord.
 // @author       Beto
 // @match        https://warframe.market/*
@@ -231,7 +231,7 @@
       const seller = owner.ingameName || owner.ingame_name;
       if (!seller) continue;
       // Plataforma/crossplay são filtrados pela API através dos headers.
-      result.push({ id: a.id, price, seller, status: owner.status, item: a.item || {}, rank: num(a.rank), direct: a.is_direct_sell === true,
+      result.push({ id: a.id, price, seller, profileSlug: owner.slug || owner.url_name || null, status: owner.status, item: a.item || {}, rank: num(a.rank), direct: a.is_direct_sell === true,
         url: m.kind === 'item' ? searchUrl(m) : `https://warframe.market/auction/${encodeURIComponent(a.id)}` });
     }
     return result.sort((a, b) => a.price - b.price || a.id.localeCompare(b.id));
@@ -246,19 +246,29 @@
   function alertEmbed(o, m) {
     const name = describeOffer(o, m);
     const itemText = m.kind === 'riven' ? `${m.name} ${o.item.name || ''}` : name;
-    const whisper = `/w ${clean(o.seller)} Hi! I want to buy: "${clean(itemText)}" for ${o.price} platinum. (warframe.market)${m.kind === 'item' ? '' : ' ' + o.url}`;
-    const attrs = m.kind === 'riven' ? o.item.attributes.map(a => `${a.positive ? '+' : '−'} ${Math.abs(a.value)} ${titleOf(a.url_name)}`).join('\n') : '';
+    const whisper = m.kind === 'riven'
+      ? `/w ${clean(o.seller)} Hi! Is your ${clean(itemText).trim()} Riven still available for ${o.price} platinum?`
+      : `/w ${clean(o.seller)} Hi! I'd like to buy your ${clean(itemText)} for ${o.price} platinum.`;
+    const attrs = m.kind === 'riven' ? (o.item.attributes || []).map(a => escapeMd(`${a.positive ? '+' : '−'} ${Math.abs(a.value)} ${titleOf(a.url_name)}`)).join('\n').slice(0, 1000) : '';
+    const status = { ingame: '🟢 No jogo', online: '🔵 No site', offline: '⚪ Offline' }[o.status] || 'Status indisponível';
+    const difference = Math.max(0, m.threshold - o.price);
     return {
-      title: `${KINDS[m.kind]} — oferta dentro do limite`, color: 0x00b8a9, url: o.url,
-      description: `**${escapeMd(name)}**\n${escapeMd(attrs)}\n\n**Mensagem para copiar:**\n\`\`\`\n${whisper}\n\`\`\``,
+      author: { name: 'Warframe Monitor', icon_url: 'https://raw.githubusercontent.com/Betguin/warframe-monitor/main/icon.png' },
+      title: `${m.name} · ${o.price} plat`.slice(0, 256), color: m.kind === 'riven' ? 0xa879f5 : 0x00b8a9, url: o.url,
+      description: `**${escapeMd(name)}**${attrs ? '\n\n' + attrs : ''}\n\n**Mensagem no jogo**\n\`\`\`\n${whisper}\n\`\`\``,
       fields: [
-        { name: 'Preço de compra', value: `${o.price} plat`, inline: true },
-        { name: 'Seu limite', value: `${m.threshold} plat`, inline: true },
-        { name: 'Vendedor / status', value: `${escapeMd(o.seller)} / ${o.status}`, inline: true },
-        { name: 'Busca', value: `[${escapeMd(m.name)}](${searchUrl(m)})`, inline: false },
+        { name: '💎 Preço', value: `**${o.price} plat**`, inline: true },
+        { name: 'Seu limite', value: `${m.threshold} plat\n${difference ? `${difference} plat abaixo` : 'Dentro do limite'}`, inline: true },
+        { name: 'Vendedor', value: `${escapeMd(o.seller)}\n${status}`, inline: true },
       ], footer: { text: `Warframe Monitor · ${m.platform}${m.crossplay ? ' + crossplay' : ''}${m.kind !== 'item' && !o.direct ? ' · compra imediata de leilão' : ''}` },
       timestamp: new Date().toISOString(),
     };
+  }
+
+  function alertPayload(o, m) {
+    const links = [{ type: 2, style: 5, label: 'Ver oferta', url: o.url }];
+    if (o.profileSlug) links.push({ type: 2, style: 5, label: 'Ver vendedor', url: `https://warframe.market/profile/${encodeURIComponent(o.profileSlug)}` });
+    return { allowed_mentions: { parse: [] }, embeds: [alertEmbed(o, m)], components: [{ type: 1, components: links }] };
   }
 
   async function notifyOffers(m, offers) {
@@ -278,7 +288,7 @@
         await sleep(Math.max(0, discordBackoff - Date.now()));
         const beforeSend = getMonitor(m.id);
         if (!beforeSend?.active || beforeSend.revision !== m.revision || !leader) return;
-        await http(webhook, { method: 'POST', body: { allowed_mentions: { parse: [] }, embeds: [alertEmbed(o, m)] } });
+        await http(`${webhook}?wait=true&with_components=true`, { method: 'POST', body: alertPayload(o, m) });
         const after = getMonitor(m.id);
         if (!after || after.revision !== m.revision) return;
         after.notified = { ...(after.notified || {}), [o.id]: o.price };
